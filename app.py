@@ -1,4 +1,4 @@
 def greet():
-    return "Hello from Ajwa!"
+    return "Hello from pipeline!"
 
 print(greet())
