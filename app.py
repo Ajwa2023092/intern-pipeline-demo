@@ -1,1 +1,4 @@
-def greet():     return "Hello from the Ajwa!"  print(greet())
+def greet():
+    return "Hello from Ajwa!"
+
+print(greet())
