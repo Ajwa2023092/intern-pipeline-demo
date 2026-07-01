@@ -1,3 +1,3 @@
 def greet():
-    return "Hello from Ajwa!"
+    return "Hello from Pipeline!"
     print(greet())
