@@ -1,0 +1,101 @@
+name: Multi-Stage Deploy (Build → Staging → Production)
+
+# Trigger: runs automatically on every push to main.
+on:
+  push:
+    branches: [main]
+  # Lets you also trigger it manually from the Actions tab for testing.
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed so the deploy steps can push to gh-pages branches
+
+jobs:
+
+  # ---------------------------------------------------------------------
+  # STAGE 1 — Build & Test
+  # Runs automatically on push. If this fails, nothing below it runs.
+  # ---------------------------------------------------------------------
+  build-and-test:
+    name: "Stage 1 - Build & Test"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Run basic check
+        run: |
+          echo "Running basic validation on the site files..."
+          # Same simple check as last week's single-stage pipeline.
+          # Replace this with a real test/build command if you have one.
+          test -f index.html && echo "index.html found - check passed"
+
+      - name: Upload site as build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-build
+          path: .
+          include-hidden-files: false
+
+  # ---------------------------------------------------------------------
+  # STAGE 2 — Deploy to Staging
+  # Runs automatically once Stage 1 passes. No approval required.
+  # ---------------------------------------------------------------------
+  deploy-staging:
+    name: "Stage 2 - Deploy to Staging"
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-build
+          path: .
+
+      - name: Deploy to gh-pages-staging branch
+        id: deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages-staging
+          force_orphan: true
+
+  # ---------------------------------------------------------------------
+  # STAGE 3 — Deploy to Production
+  # Does NOT run automatically. The "production" environment below has a
+  # required reviewer configured in GitHub (Settings -> Environments ->
+  # production -> Required reviewers). GitHub pauses this job and waits
+  # for that reviewer to click Approve before it executes.
+  # ---------------------------------------------------------------------
+  deploy-production:
+    name: "Stage 3 - Deploy to Production"
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Download build artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: site-build
+          path: .
+
+      - name: Deploy to gh-pages branch (production)
+        id: deploy
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: .
+          publish_branch: gh-pages
+          force_orphan: true
