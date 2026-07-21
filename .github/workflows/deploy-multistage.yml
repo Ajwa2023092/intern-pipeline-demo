@@ -14,27 +14,49 @@ jobs:
 
   # ---------------------------------------------------------------------
   # STAGE 1 — Build & Test
-  # Runs automatically on push. If this fails, nothing below it runs.
+  # Runs automatically on push. Same script as last week's single-stage
+  # pipeline (app.py) — if it errors out, nothing below it runs.
   # ---------------------------------------------------------------------
   build-and-test:
     name: "Stage 1 - Build & Test"
     runs-on: ubuntu-latest
+    outputs:
+      greeting: ${{ steps.run_app.outputs.greeting }}
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Run basic check
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Run app.py (same basic check as last week)
+        id: run_app
         run: |
-          echo "Running basic validation on the site files..."
-          # Same simple check as last week's single-stage pipeline.
-          # Replace this with a real test/build command if you have one.
-          test -f index.html && echo "index.html found - check passed"
+          OUTPUT=$(python app.py)
+          echo "App printed: $OUTPUT"
+          echo "greeting=$OUTPUT" >> "$GITHUB_OUTPUT"
+
+      - name: Build a tiny static page from the app's output
+        run: |
+          mkdir -p site
+          cat > site/index.html << EOF
+          <!DOCTYPE html>
+          <html>
+            <head><title>Pipeline Demo</title></head>
+            <body>
+              <h1>${{ steps.run_app.outputs.greeting }}</h1>
+              <p>Built from app.py by the multi-stage pipeline.</p>
+            </body>
+          </html>
+          EOF
 
       - name: Upload site as build artifact
         uses: actions/upload-artifact@v4
         with:
           name: site-build
-          path: .
+          path: site
           include-hidden-files: false
 
   # ---------------------------------------------------------------------
