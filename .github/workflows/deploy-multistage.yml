@@ -34,7 +34,7 @@ jobs:
       - name: Run app.py (same basic check as last week)
         id: run_app
         run: |
-          OUTPUT=$(python app.py)
+          OUTPUT=$(python app.py) 
           echo "App printed: $OUTPUT"
           echo "greeting=$OUTPUT" >> "$GITHUB_OUTPUT"
 
